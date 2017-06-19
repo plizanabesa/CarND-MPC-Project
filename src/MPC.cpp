@@ -2,16 +2,16 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
-#include "matplotlibcpp.h"
+//#include "matplotlibcpp.h"
 #include <math.h>
 
-namespace plt = matplotlibcpp;
+//namespace plt = matplotlibcpp;
 
 using CppAD::AD;
 
 // Set the timestep length and duration
 // Parameters to tune
-size_t N = 25;
+size_t N = 20;
 double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
@@ -28,7 +28,7 @@ const double Lf = 2.67;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 40 mph.
-double ref_v = 40;
+double ref_v = 40 * 0.44704;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -63,14 +63,14 @@ class FG_eval {
       
       // The part of the cost based on the reference state.
       for (int t = 0; t < N; t++) {
-          fg[0] += CppAD::pow(vars[cte_start + t], 2);
+          fg[0] += 4000 * CppAD::pow(vars[cte_start + t], 2);
           fg[0] += CppAD::pow(vars[epsi_start + t], 2);
           fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
       }
       
       // Minimize the use of actuators.
       for (int t = 0; t < N - 1; t++) {
-          fg[0] += CppAD::pow(vars[delta_start + t], 2);
+          fg[0] += 10000 * CppAD::pow(vars[delta_start + t], 2);
           fg[0] += CppAD::pow(vars[a_start + t], 2);
       }
       
@@ -118,7 +118,7 @@ class FG_eval {
           AD<double> delta0 = vars[delta_start + t - 1];
           AD<double> a0 = vars[a_start + t - 1];
           
-          AD<double> f0 = coeffs[0] + coeffs[1] * x0;
+          AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0 * x0 + coeffs[3] * x0 * x0 * x0;
           AD<double> psides0 = CppAD::atan(coeffs[1]);
           
           // Here's `x` to get you started.
@@ -151,7 +151,6 @@ MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
-  size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
     double x = state[0];
@@ -265,9 +264,31 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
-
-  return {solution.x[x_start + 1],   solution.x[y_start + 1],
-        solution.x[psi_start + 1], solution.x[v_start + 1],
-        solution.x[cte_start + 1], solution.x[epsi_start + 1],
-        solution.x[delta_start],   solution.x[a_start]};
+  bool print_values = true;
+  if (print_values){
+      // Print predicted values
+      for (int t = 0; t < N - 1; t++) {
+          AD<double> x_t = solution.x[x_start + t + 1];
+          AD<double> y_t = solution.x[y_start + t + 1];
+          AD<double> psi_t = solution.x[psi_start + t + 1];
+          AD<double> v_t = solution.x[v_start + t + 1];
+          AD<double> cte_t = solution.x[cte_start + t + 1];
+          AD<double> epsi_t = solution.x[epsi_start + t + 1];
+          AD<double> delta_t = solution.x[delta_start + t];
+          AD<double> a_t = solution.x[a_start + t];
+          std::cout << " (x,y,psi,v,cte,epsi,delta,a) step  " << t << " : " << x_t << " , " << y_t <<  " , " << psi_t << " , " << v_t << " , " << cte_t << " , " << epsi_t << " , " << delta_t << " , " << a_t << std::endl;
+      }
+  }
+  
+  vector<double> result;
+    
+  result.push_back(solution.x[delta_start]);
+  result.push_back(solution.x[a_start]);
+    
+  for (int i = 0; i < N-1; i++){
+    result.push_back(solution.x[x_start + i + 1]);
+    result.push_back(solution.x[y_start + i + 1]);
+  }
+    
+  return result;
 }
