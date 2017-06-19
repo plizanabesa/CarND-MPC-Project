@@ -131,7 +131,7 @@ int main() {
           double psi_car = 0;
          
           // Convert speed from mph to m/s
-            double v_ms = v * 0.44704;
+          double v_ms = v * 0.44704;
             
           // Estimate CTE. The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
@@ -154,13 +154,14 @@ int main() {
           // Add latency: predict state in  100ms
           double latency = 0.1;
           double Lf = 2.67;
-          double f0 = coeffs[0] + coeffs[1] * px_car + coeffs[2] * px_car*px_car + coeffs[3] * px_car*px_car*px_car;
-          double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_car + 3 * coeffs[3] * px_car*px_car);
-          cte = f0 - py + v * sin(epsi) * latency;
-          epsi = -psides0 * v * delta * latency / Lf;
-          px_car = px_car + v * latency;
-          psi = v * delta * latency / Lf;
-          v = v + accel *latency;
+          double f0 = coeffs[0] + coeffs[1] * px_car + coeffs[2] * px_car * px_car + coeffs[3] * px_car * px_car * px_car;
+          double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_car + 3 * coeffs[3] * px_car * px_car);
+          /*cte = f0 - py + v_ms * sin(epsi) * latency;
+          epsi = -psides0 * v_ms * delta * latency / Lf;
+          px_car = px_car + v_ms * cos(delta) * latency;
+          py_car = py_car + v_ms * sin(delta) * latency;
+          psi = v_ms * delta * latency / Lf;
+          v_ms = v_ms + accel * latency;*/
           state << px_car, py_car, psi_car, v_ms, cte, epsi;
           auto vars = mpc.Solve(state, coeffs);
           
@@ -241,7 +242,7 @@ int main() {
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
           
-          this_thread::sleep_for(chrono::milliseconds(100));
+          //this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
