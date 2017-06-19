@@ -103,9 +103,20 @@ int main() {
           delta = -delta;
           double accel = j[1]["throttle"];
             
+          // Convert speed from mph to m/s
+          double v_ms = v * 0.44704;
+            
           // Calculate steering angle and throttle using MPC. Both are in between [-1, 1].
           double steer_value;
           double throttle_value;
+            
+          // Add latency: predict state in 100ms
+          double latency = 0.1;
+          double Lf = 2.67;
+          px = px + v_ms * cos(psi) * latency;
+          py = py + v_ms * sin(psi) * latency;
+          psi = psi + v_ms * delta * latency / Lf;
+          v_ms = v_ms + accel * latency;
             
           // Transform reference trajectory points from map coordinate system to vehicle coordinate system
           Eigen::VectorXd ptsx_car(ptsx.size());
@@ -130,9 +141,6 @@ int main() {
           double py_car = 0;
           double psi_car = 0;
          
-          // Convert speed from mph to m/s
-          double v_ms = v * 0.44704;
-            
           // Estimate CTE. The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
           double cte = polyeval(coeffs, px_car) - py_car;
@@ -151,22 +159,23 @@ int main() {
             
           // Solve optimization model for predictive control
           Eigen::VectorXd state(6);
-          // Add latency: predict state in  100ms
-          double latency = 0.1;
-          double Lf = 2.67;
-          double f0 = coeffs[0] + coeffs[1] * px_car + coeffs[2] * px_car * px_car + coeffs[3] * px_car * px_car * px_car;
-          double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_car + 3 * coeffs[3] * px_car * px_car);
-          /*cte = f0 - py + v_ms * sin(epsi) * latency;
-          epsi = -psides0 * v_ms * delta * latency / Lf;
-          px_car = px_car + v_ms * cos(delta) * latency;
+          
+          // [Discarded] Add latency after transformations: predict state in 100ms. This is to be used only when adding latency after the coordinate transformations. However, it was discarded, since this approach is more complicated than adding the latency before, as it involves updating both epsi and cte as well as x,y,psi and v.
+          /*px_car = px_car + v_ms * cos(delta) * latency;
           py_car = py_car + v_ms * sin(delta) * latency;
-          psi = v_ms * delta * latency / Lf;
-          v_ms = v_ms + accel * latency;*/
+          psi_car = psi_car + v_ms * delta * latency / Lf;
+          v_ms = v_ms + accel * latency;
+          double poly_diff_lat = coeffs[1] + 2 * coeffs[2] * px_car + 3 * coeffs[3] * pow(px_car, 2);
+          // Correct psi error
+          epsi = psi_car - atan(poly_diff_lat);
+          // Correct CTE
+          cte = polyeval(coeffs, px_car) - py_car;*/
+          
           state << px_car, py_car, psi_car, v_ms, cte, epsi;
           auto vars = mpc.Solve(state, coeffs);
           
           json msgJson;
-          // Get steering and throttle values. TODO: negative steering.
+          // Get steering and throttle values.
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
 
@@ -242,7 +251,7 @@ int main() {
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
           
-          //this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

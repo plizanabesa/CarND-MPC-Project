@@ -70,14 +70,14 @@ class FG_eval {
       
       // Minimize the use of actuators.
       for (int t = 0; t < N - 1; t++) {
-          fg[0] += 5000 * CppAD::pow(vars[delta_start + t], 2);
-          fg[0] += 10 * CppAD::pow(vars[a_start + t], 2);
+          fg[0] += 3500 * CppAD::pow(vars[delta_start + t], 2); // Without latency - 80 mph: 5000. With latency decrease so the steering actuator can respond quicker.
+          fg[0] += 15 * CppAD::pow(vars[a_start + t], 2); // Without latency - 80 mph: 10
       }
       
       // Minimize the value gap between sequential actuations.
       for (int t = 0; t < N - 2; t++) {
-          fg[0] += 500 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-          fg[0] += 10 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+          fg[0] += 1200 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2); // Without latency - 80 mph: 500. With latency increase to compensate the decrease in the actuator cost (from 5000 to 3500).
+          fg[0] += 15 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2); // Without latency - 80 mph: 10
       }
       
       //

@@ -1,0 +1,10 @@
+MPC Project Implementation
+
+The model is described in the code, in which the actuators are two (steering and throttle), the state is comprised by the position (x,y wrt to car coordinates), speed (m/s), psi (header wrt car coordinates), and the cross track error (CTE) and the error between the actual psi and the desired psi (epsi). The update equations are derived from the kinematic model seen in class.
+
+I tried several combinations of N (10, 20 and 25) and dt (0.05, 0.1 and 0.2) and the best one for desired speed of 80 mph was N=20 with dt=0.05.
+
+Previous to fit the polynomial with the desired waypoints, the vehicle location coordinates were transformed to the car coordinate system. When adding latency, the vehicle location is updated by 0.1s before applying the transformation. Latency was added by assuming the car moved with the kinematic model with the simulator speed, acceleration and steering angle.
+
+The optimal cost/objective funcion parameters were obtained by manual tuning. When adding latency, the parameters were modified slighlty, giving the model more chance to output higher delta actuators to respond faster to the latency (decrease parameter in cost), but further increasing the cost parameter associated to consecutive delta actuator outputs.
+
